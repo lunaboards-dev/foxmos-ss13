@@ -1,5 +1,5 @@
 #pragma once
-
+#include <string>
 #include "byondapi.h"
 #include "byondapi_cpp_wrappers.h"
 

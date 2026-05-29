@@ -24,8 +24,9 @@ TurfGrid all_turfs;
 ByondValue SSair;
 int str_id_extools_pointer;
 int gas_mixture_count = 0;
-float gas_moles_visible[TOTAL_NUM_GASES];
-std::vector<ByondValue> gas_overlays[TOTAL_NUM_GASES];
+//float gas_moles_visible[TOTAL_NUM_GASES];
+std::vector<float> gas_moles_visible;
+std::vector<std::vector<ByondValue>> gas_overlays;
 
 std::shared_ptr<GasMixture> &get_gas_mixture(ByondValue &val)
 {
@@ -270,7 +271,7 @@ MM_API(gm_get_gasses, {
 	GasMixture &gm = *get_gas_mixture(src);
 	Byond_CreateList(&list);
 	int count = 0;
-	for (int i = 0; i < TOTAL_NUM_GASES; i++) {
+	for (int i = 0; i < total_num_gases; i++) {
 		if (gm.get_moles(i) >= GAS_MIN_MOLES) {
 			Byond_WriteListIndex(list, FromFloat(count++), gas_id_to_type[i]);
 		}
@@ -648,7 +649,7 @@ BYOND_EXPORT CByondValue mm_turf_update_visuals(u4c _argc, CByondValue argv[]) {
 	CByondValue old_overlay_types_cval = old_overlay_types_val.value;
 	std::vector<ByondValue> overlay_types;
 
-	for (int i = 0; i < TOTAL_NUM_GASES; i++) {
+	for (int i = 0; i < total_num_gases; i++) {
 		if (!gas_overlays[i].size()) continue;
 		if (gm.get_moles(i) > gas_moles_visible[i]) {
 			// you know whats fun?
@@ -800,19 +801,27 @@ void initialize_gas_overlays() {
 	//Container meta_gas_info = GLOB.get("meta_gas_info");
 	ByondValue meta_gas_info = GLOB.ReadVar("meta_gas_info");
 	if (!meta_gas_info) return;
-	for (int i = 0; i < TOTAL_NUM_GASES; ++i)
+	for (int i = 0; i < total_num_gases; ++i)
 	{
-		ByondValue v = gas_id_to_type[i];
-		Container gas_meta = meta_gas_info.at(v);
-		gas_moles_visible[i] = gas_meta.at(2);
+		CByondValue v = gas_id_to_type[i].value;
+		//Container gas_meta = meta_gas_info.at(v);
+		ByondValue _gas_meta = Byond_ReadListIndex(meta_gas_info, v);
+		u4c gm_len = 0;
+		Byond_ReadList(_gas_meta, nullptr, &gm_len);
+		ByondValue gas_meta[gm_len];
+		Byond_ReadList(_gas_meta, gas_meta, &gm_len);
+		gas_moles_visible[i] = gas_meta[2];
 		gas_overlays[i].clear();
-		if (gas_meta.at(3)) {
-			Container gas_overlays_list = gas_meta.at(3);
-			int num_overlays = gas_overlays_list.length();
+		if (gas_meta[3]) {
+			//Container gas_overlays_list = gas_meta.at(3);
+			CByondValue _gas_overlays_list = gas_meta[3].value;
+			std::vector<ByondValue> gas_overlays_list = Byond_ReadList(_gas_overlays_list);
+			int num_overlays = gas_overlays_list.size();
 			for (int j = 0; j < num_overlays; j++) {
 				gas_overlays[i].push_back(gas_overlays_list[j]);
 			}
 		}
+
 	}
 }
 
@@ -862,18 +871,27 @@ const char* enable_monstermos()
 	//Set up gas types map
 	std::vector<ByondValue> nullvector = { ByondValue(0.0f) };
 	//Container gas_types_list = Core::get_proc("/proc/gas_types").call(nullvector);
-	Byond_CallGlobalProc("/gas_types", nullptr, 0);
+	CByondValue _gas_types_list;
+	Byond_CallGlobalProc("/gas_types", nullptr, 0, &_gas_types_list);
 	//Container meta_gas_info = ByondValue::Global().get("meta_gas_info");
-	int gaslen = gas_types_list.length();
-	if (gaslen != TOTAL_NUM_GASES) {
+	u4c gaslen;
+	Byond_ReadList(&_gas_types_list, nullptr, &gaslen);
+	total_num_gases = gaslen;
+	gas_overlays.resize(gaslen);
+	gas_specific_heat.resize(gaslen);
+	gas_moles_visible.resize(gaslen);
+	CByondValue gas_types_list[gaslen];
+	Byond_ReadList(&_gas_types_list, gas_types_list, &gaslen);
+	/*if (gaslen != TOTAL_NUM_GASES) {
 		return "TOTAL_NUM_GASES does not match the number of /datum/gas subtypes!!";
-	}
+	}*/
 	for (int i = 0; i < gaslen; ++i)
 	{
-		ByondValue v = gas_types_list.at(i);
-		gas_types[Core::stringify(v)] = gas_types_list.at(i);
-		gas_ids[v.GetRef()] = i;
-		gas_specific_heat[i] = gas_types_list.at(v).ByondValuef;
+		CByondValue v = gas_types_list[i];
+		std::string key = Byond_ToString(v);
+		gas_types[key] = gas_types_list[i];
+		gas_ids[v.data.ref] = i;
+		gas_specific_heat[i] = gas_types_list[i].data.num;
 		gas_id_to_type.push_back(v);
 	}
 	initialize_gas_overlays();

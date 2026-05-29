@@ -2,6 +2,10 @@
 #define BYONDAPI_WRAPPERS_H
 
 #include "byondapi.h"
+#include <vector>
+#include <string>
+#define _STRING_
+#define _VECTOR_
 
 #if __cplusplus > 199711L
 #define BYONDVALUE_FINAL final
