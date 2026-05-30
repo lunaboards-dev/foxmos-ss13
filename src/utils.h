@@ -127,17 +127,17 @@ inline CByondValue FromStr(char * str) {
 	return v;
 }
 
-CByondValue ByondNull = {
+static CByondValue ByondNull = {
     .type = NULL_D,
     .data = {.ref = 0}
 };
 
-CByondValue ByondTrue = {
+static CByondValue ByondTrue = {
     .type = NUMBER,
     .data = {.num = 1}
 };
 
-CByondValue ByondFalse = {
+static CByondValue ByondFalse = {
     .type = NUMBER,
     .data = {.num = 0}
 };

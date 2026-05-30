@@ -35,7 +35,7 @@ std::shared_ptr<GasMixture> &get_gas_mixture(ByondValue &val)
 	return *((std::shared_ptr<GasMixture>*)v);
 }
 
-#define MM_API(name, code) BYOND_EXPORT CByondValue fm_##name(u4c _argc, CByondValue argv[]) { \
+#define MM_API(name, code) extern "C" BYOND_EXPORT CByondValue fm_##name(u4c _argc, CByondValue argv[]) { \
 	CByondValue src = argv[0]; \
 	CByondValue * args = argv+1; \
 	u4c argc = _argc - 1; \
