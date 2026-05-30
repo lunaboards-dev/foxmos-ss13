@@ -28,14 +28,14 @@ int gas_mixture_count = 0;
 std::vector<float> gas_moles_visible;
 std::vector<std::vector<ByondValue>> gas_overlays;
 
-std::shared_ptr<GasMixture> &get_gas_mixture(ByondValue &val)
+std::shared_ptr<GasMixture> &get_gas_mixture(ByondValue val)
 {
 	uint32_t v = (uint32_t)val.ReadVarByStrId(str_id_extools_pointer).GetNum();//val.get_by_id(str_id_extools_pointer).ByondValue;
 	if (v == 0) Runtime("Gas mixture has null extools pointer");
 	return *((std::shared_ptr<GasMixture>*)v);
 }
 
-#define MM_API(name, code) extern "C" BYOND_EXPORT CByondValue fm_##name(u4c _argc, CByondValue argv[]) { \
+#define MM_API(name, code) extern "C" BYOND_EXPORT CByondValue fm_##name(u4c _argc, CByondValue * argv) { \
 	CByondValue src = argv[0]; \
 	CByondValue * args = argv+1; \
 	u4c argc = _argc - 1; \
@@ -683,6 +683,7 @@ BYOND_EXPORT CByondValue mm_turf_update_visuals(u4c _argc, CByondValue argv[]) {
 		Byond_WriteListIndex(list, FromFloat(i+1), overlay_types[i]);
 	}
 	Byond_CallProc(src, "set_visuals", &list, 1);
+	return ByondNull;
 }
 
 /* trvh turf_update_visuals(unsigned int args_len, ByondValue* args, ByondValue src) {
