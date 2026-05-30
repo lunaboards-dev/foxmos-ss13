@@ -857,7 +857,7 @@ void ExcitedGroup::dismantle(bool unexcite) {
 	if (unexcite) {
 		std::vector<CByondValue> turf_refs;
 		for (int i = 0; i < turf_list_size;  i++) {
-			turf_refs.push_back(turf_list[i]->turf_ref);
+			turf_refs.push_back(turf_list[i]->turf_ref.value);
 		}
 		ExecProc(active_turfs.value, "Remove", turf_refs);
 	}
