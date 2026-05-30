@@ -9,3 +9,4 @@ extern int str_id_is_openturf;
 extern int str_id_current_cycle, str_id_archived_cycle, str_id_planetary_atmos, str_id_initial_gas_mix;
 extern int str_id_active_turfs;
 extern int str_id_react, str_id_consider_pressure_difference, str_id_update_visuals, str_id_floor_rip;
+extern int str_id_pressure_specific_target, str_id_consider_firelocks, str_id_add_to_active;

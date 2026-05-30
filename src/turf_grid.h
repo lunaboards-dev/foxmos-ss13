@@ -3,6 +3,7 @@
 #include "GasMixture.h"
 #include <memory>
 #include <vector>
+#include "byondapi_cpp_wrappers.h"
 #include "utils.h"
 
 class TurfGrid;

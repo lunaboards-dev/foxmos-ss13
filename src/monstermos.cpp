@@ -843,6 +843,7 @@ int str_id_x, str_id_y, str_id_z;
 int str_id_current_cycle, str_id_archived_cycle, str_id_planetary_atmos, str_id_initial_gas_mix;
 int str_id_active_turfs;
 int str_id_react, str_id_consider_pressure_difference, str_id_update_visuals, str_id_floor_rip;
+int str_id_pressure_specific_target, str_id_consider_firelocks, str_id_add_to_active;
 
 const char* enable_monstermos()
 {
@@ -866,6 +867,9 @@ const char* enable_monstermos()
 	str_id_update_visuals = Byond_GetStrId("update visuals");
 	str_id_floor_rip = Byond_GetStrId("handle decompression floor rip");
 	str_id_extools_pointer = Byond_GetStrId("_extools_pointer_gasmixture");
+	str_id_pressure_specific_target = Byond_GetStrId("pressure_specific_target");
+	str_id_consider_firelocks = Byond_GetStrId("consider firelocks");
+	str_id_add_to_active = Byond_GetStrId("add to active");
 
 	SSair = GetGlobal("SSair"); //ByondValue::Global().get("SSair");
 	//Set up gas types map

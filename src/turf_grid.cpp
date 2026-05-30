@@ -4,6 +4,7 @@
 #include <cstring>
 #include <cmath>
 #include <string>
+#include "byondapi_cpp_wrappers.h"
 
 using namespace monstermos::constants;
 
@@ -13,16 +14,17 @@ Tile::Tile()
 }
 
 void Tile::update_adjacent(TurfGrid &grid) {
-	Container adjacent_list = turf_ref.get_by_id(str_id_atmosadj);
+	ByondValue _adjacent_list = turf_ref.ReadVarByStrId(str_id_atmosadj);
+	std::vector<ByondValue> adjacent_list = Byond_ReadList(_adjacent_list);
 	adjacent_bits = 0;
-	int adjacent_len = adjacent_list.length();
+	int adjacent_len = adjacent_list.size();
 	for (int i = 0; i < adjacent_len; i++) {
-		Value turf = adjacent_list.at(i);
-		if (turf.type != TURF)
+		ByondValue turf = adjacent_list[i].value;
+		if (turf.value.type != TURF)
 			continue;
-		int x = turf.get_by_id(str_id_x).valuef;
-		int y = turf.get_by_id(str_id_y).valuef;
-		int z = turf.get_by_id(str_id_z).valuef;
+		int x = turf.ReadVarByStrId(str_id_x).GetNum();
+		int y = turf.ReadVarByStrId(str_id_y).GetNum();
+		int z = turf.ReadVarByStrId(str_id_z).GetNum();
 		Tile *other = grid.get(x, y, z);
 		if (other == nullptr)
 			continue;
@@ -52,11 +54,11 @@ break;
 }
 
 void Tile::update_air_ref() {
-	bool isopenturf = turf_ref.get_by_id(str_id_is_openturf).valuef;
+	bool isopenturf = turf_ref.ReadVarByStrId(str_id_is_openturf).GetRef();
 	if (isopenturf) {
-		Value air_ref = turf_ref.get_by_id(str_id_air);
-		if (air_ref.type == DATUM) {
-			air = get_gas_mixture(air_ref);
+		ByondValue air_ref = turf_ref.ReadVarByStrId(str_id_air);
+		if (air_ref.GetType() == DATUM) {
+			air = get_gas_mixture(air_ref.value);
 		}
 		else {
 			air.reset();
@@ -67,22 +69,23 @@ void Tile::update_air_ref() {
 	}
 }
 
-extern Value SSair;
+extern ByondValue SSair;
 std::vector<std::weak_ptr<ExcitedGroup>> excited_groups;
 
 void Tile::process_cell(int fire_count) {
 	if (!SSair) return;
 	if (!air) {
-		std::string message = (std::string("process_cell called on turf with no air! ") + std::to_string(turf_ref.value));
+		std::string message = (std::string("process_cell called on turf with no air! ") + std::to_string(turf_ref));
 		Runtime((char*)message.c_str()); // ree why doesn't it accept const
 		return;
 	}
-	if (turf_ref.get_by_id(str_id_archived_cycle) < fire_count) {
+	if (turf_ref.ReadVarByStrId(str_id_archived_cycle) < fire_count) {
 		archive(fire_count);
 	}
-	SetVariable(turf_ref.type, turf_ref.value, str_id_current_cycle, Value(float(fire_count)));
+	//SetVariable(turf_ref.type, turf_ref.value, str_id_current_cycle, ByondValue(float(fire_count)));
+	Byond_WriteVarByStrId(turf_ref, str_id_current_cycle, FromFloat(fire_count));
 
-	bool has_planetary_atmos = turf_ref.get_by_id(str_id_planetary_atmos).valuef;
+	bool has_planetary_atmos = turf_ref.ReadVarByStrId(str_id_planetary_atmos).GetNum();
 	int adjacent_turfs_length = 0;
 	atmos_cooldown++;
 	for (int i = 0; i < 6; i++) {
@@ -95,7 +98,7 @@ void Tile::process_cell(int fire_count) {
 		if (!(adjacent_bits & (1 << i))) continue;
 		Tile& enemy_tile = *adjacent[i];
 		if (!enemy_tile.air) continue; // having no air is bad I think or something.
-		if (fire_count <= enemy_tile.turf_ref.get_by_id(str_id_current_cycle)) continue;
+		if (fire_count <= enemy_tile.turf_ref.ReadVarByStrId(str_id_current_cycle)) continue;
 		enemy_tile.archive(fire_count);
 
 		bool should_share_air = false;
@@ -108,7 +111,8 @@ void Tile::process_cell(int fire_count) {
 		}
 		else if (air->compare(*enemy_tile.air) != -2) {
 			if (!enemy_tile.excited) {
-				SSair.invoke("add_to_active", { enemy_tile.turf_ref });
+				//SSair.invoke("add_to_active", { enemy_tile.turf_ref });
+				Byond_CallProcByStrId(SSair, str_id_add_to_active, &enemy_tile.turf_ref.value, 1);
 			}
 			std::shared_ptr<ExcitedGroup> eg = excited_group;
 			if (!eg)
@@ -150,29 +154,32 @@ void Tile::process_cell(int fire_count) {
 		}
 	}
 		
-	turf_ref.get_by_id(str_id_air).invoke_by_id(str_id_react, { turf_ref });
-	turf_ref.invoke_by_id(str_id_update_visuals, {});
-	if ((!excited_group && !(air->get_temperature() > MINIMUM_TEMPERATURE_START_SUPERCONDUCTION && turf_ref.invoke("consider_superconductivity", {Value::True()})))
+	ExecProcId(turf_ref.ReadVarByStrId(str_id_air).value, str_id_react, {turf_ref.value});
+	ExecProcId(turf_ref.value, str_id_update_visuals, {});
+	//turf_ref.get_by_id(str_id_air).invoke_by_id(str_id_react, { turf_ref });
+	//turf_ref.invoke_by_id(str_id_update_visuals, {});
+	if ((!excited_group && !(air->get_temperature() > MINIMUM_TEMPERATURE_START_SUPERCONDUCTION && ExecProc(turf_ref.value, "consider_superconductivity", {ByondTrue})))
 		|| (atmos_cooldown > (EXCITED_GROUP_DISMANTLE_CYCLES * 2))) {
-		SSair.invoke("remove_from_active", { turf_ref });
+		//SSair.invoke("remove_from_active", { turf_ref });
+		ExecProc(SSair.value, "remove_from_active", {turf_ref.value});
 	}
 }
 
 void Tile::update_planet_atmos() {
 
-	if (!planet_atmos_info || planet_atmos_info->last_initial != turf_ref.get_by_id(str_id_initial_gas_mix)) {
-		Value air_ref = turf_ref.get_by_id(str_id_air);
-		if (air_ref.type != DATUM || get_gas_mixture(air_ref) != air) {
-			air = get_gas_mixture(air_ref);
-			std::string message = (std::string("Air reference in extools doesn't match actual air, or the air is null! Turf ref: ") + std::to_string(turf_ref.value));
+	if (!planet_atmos_info || planet_atmos_info->last_initial != turf_ref.ReadVarByStrId(str_id_initial_gas_mix)) {
+		ByondValue air_ref = turf_ref.ReadVarByStrId(str_id_air);
+		if (air_ref.GetType() != DATUM || get_gas_mixture(air_ref.value) != air) {
+			air = get_gas_mixture(air_ref.value);
+			std::string message = (std::string("Air reference in extools doesn't match actual air, or the air is null! Turf ref: ") + turf_ref.ToString());
 			Runtime((char *)message.c_str()); // ree why doesn't it accept const
 			return;
 		}
 		if (!planet_atmos_info) planet_atmos_info = std::make_unique<PlanetAtmosInfo>();
-		planet_atmos_info->last_initial = std::move(turf_ref.get_by_id(str_id_initial_gas_mix));
+		planet_atmos_info->last_initial = std::move(turf_ref.ReadVarByStrId(str_id_initial_gas_mix));
 		GasMixture air_backup = *air;
 		*air = GasMixture(CELL_VOLUME);
-		turf_ref.get_by_id(str_id_air).invoke("copy_from_turf", { turf_ref });
+		ExecProc(turf_ref.ReadVarByStrId(str_id_air).value, "copy_from_turf", { turf_ref.value });
 		planet_atmos_info->last_mix = *air;
 		planet_atmos_info->last_mix.archive();
 		planet_atmos_info->last_mix.mark_immutable();
@@ -193,8 +200,9 @@ void Tile::last_share_check() {
 }
 
 void Tile::archive(int fire_count) {
-	if (turf_ref.get_by_id(str_id_is_openturf).valuef) {
-		SetVariable(turf_ref.type, turf_ref.value, str_id_archived_cycle, Value(float(fire_count)));
+	if (turf_ref.ReadVarByStrId(str_id_is_openturf).GetNum()) {
+		//SetVariable(turf_ref.type, turf_ref.value, str_id_archived_cycle, Value(float(fire_count)));
+		Byond_WriteVarByStrId(turf_ref.value, str_id_archived_cycle, FromFloat(fire_count));
 	}
 	if (air) {
 		air->archive();
@@ -264,9 +272,9 @@ void Tile::finalize_eq() {
 			}
 			tile->monstermos_info->transfer_dirs[opp_dir_index[i]] = 0;
 			tile->air->merge(air->remove(amount)); // push them gases.
-			turf_ref.invoke_by_id(str_id_update_visuals, {});
-			tile->turf_ref.invoke_by_id(str_id_update_visuals, {});
-			turf_ref.invoke_by_id(str_id_consider_pressure_difference, { tile->turf_ref, amount });
+			ExecProcId(turf_ref.value, str_id_update_visuals, {});
+			ExecProcId(tile->turf_ref.value, str_id_update_visuals, {});
+			ExecProcId(turf_ref.value, str_id_consider_pressure_difference, { tile->turf_ref.value, FromFloat(amount) });
 		}
 	}
 }
@@ -315,7 +323,7 @@ void Tile::equalize_pressure_in_zone(int cyclenum) {
 	}
 
 
-	if (turf_ref.get_by_id(str_id_planetary_atmos).valuef) {
+	if (turf_ref.ReadVarByStrId(str_id_planetary_atmos).GetNum()) {
 		return; // nah, let's not lag the server trying to process lavaland please.
 	}
 
@@ -334,7 +342,7 @@ void Tile::equalize_pressure_in_zone(int cyclenum) {
 		if (i < MONSTERMOS_TURF_LIMIT) {
 			float turf_moles = exploring->air->total_moles();
 			exploring->monstermos_info->mole_delta = turf_moles;
-			if (exploring->turf_ref.get_by_id(str_id_planetary_atmos).valuef) {
+			if (exploring->turf_ref.ReadVarByStrId(str_id_planetary_atmos).GetNum()) {
 				planet_turfs.push_back(exploring);
 				exploring->monstermos_info->is_planet = true;
 				continue;
@@ -562,7 +570,7 @@ void Tile::equalize_pressure_in_zone(int cyclenum) {
 				if (!tile2->monstermos_info || tile2->monstermos_info->last_queue_cycle != queue_cycle) continue;
 				if (tile2->monstermos_info->last_slow_queue_cycle == queue_cycle_slow) continue;
 				if (tile2->monstermos_info->is_planet) continue;
-				tile->turf_ref.invoke("consider_firelocks", { tile2->turf_ref });
+				ExecProcId(tile->turf_ref.value, str_id_consider_firelocks, { tile2->turf_ref.value });
 				if (tile->adjacent_bits & (1 << j)) {
 					tile2->monstermos_info->last_slow_queue_cycle = queue_cycle_slow;
 					tile2->monstermos_info->curr_transfer_dir = opp_dir_index[j];
@@ -592,7 +600,7 @@ void Tile::equalize_pressure_in_zone(int cyclenum) {
 			Tile *tile2 = tile->adjacent[j];
 			if (!tile2->air) continue;
 			if (tile2->air->compare(*air) != -2) {
-				SSair.invoke("add_to_active", { tile->turf_ref });
+				ExecProcId(SSair.value, str_id_add_to_active, { tile->turf_ref.value });
 				break;
 			}
 		}
@@ -617,7 +625,7 @@ void Tile::explosively_depressurize(int cyclenum) {
 		Tile *tile = turfs[i];
 		tile->monstermos_info->last_cycle = cyclenum;
 		tile->monstermos_info->curr_transfer_dir = 6;
-		if (tile->turf_ref.get_by_id(str_id_planetary_atmos).valuef) {
+		if (tile->turf_ref.ReadVarByStrId(str_id_planetary_atmos).GetNum()) {
 			// planet atmos > space
 			if (!warned_about_planet_atmos) {
 				// warn about planet atmos
@@ -627,7 +635,8 @@ void Tile::explosively_depressurize(int cyclenum) {
 		}
 		if (tile->air->is_immutable()) {
 			space_turfs.push_back(tile);
-			tile->turf_ref.set("pressure_specific_target", tile->turf_ref);
+			//tile->turf_ref.set("pressure_specific_target", tile->turf_ref);
+			Byond_WriteVarByStrId(tile->turf_ref, str_id_pressure_specific_target, tile->turf_ref);
 		} else {
 			if (i > MONSTERMOS_HARD_TURF_LIMIT) continue;
 			for (int j = 0; j < 6; j++) {
@@ -635,7 +644,7 @@ void Tile::explosively_depressurize(int cyclenum) {
 				Tile *tile2 = tile->adjacent[j];
 				if (!tile2->air) continue;
 				if (tile2->monstermos_info && tile2->monstermos_info->last_queue_cycle == queue_cycle) continue;
-				tile->turf_ref.invoke("consider_firelocks", {tile2->turf_ref});
+				ExecProcId(tile->turf_ref.value, str_id_consider_firelocks, {tile2->turf_ref.value});
 				if (tile->adjacent_bits & (1 << j)) {
 					if (tile2->monstermos_info)
 						*tile2->monstermos_info = MonstermosInfo(); // null it out.
@@ -667,27 +676,32 @@ void Tile::explosively_depressurize(int cyclenum) {
 			if (tile2->air->is_immutable()) continue;
 			tile2->monstermos_info->curr_transfer_dir = opp_dir_index[j];
 			tile2->monstermos_info->curr_transfer_amount = 0;
-			tile2->turf_ref.set("pressure_specific_target", tile->turf_ref.get("pressure_specific_target"));
+			//tile2->turf_ref.set("pressure_specific_target", tile->turf_ref.get("pressure_specific_target"));
+			Byond_WriteVarByStrId(tile2->turf_ref, str_id_pressure_specific_target, tile->turf_ref.ReadVarByStrId(str_id_pressure_specific_target));
 			tile2->monstermos_info->last_slow_queue_cycle = queue_cycle_slow;
 			progression_order.push_back(tile2);
 		}
 	}
-	List hpd = SSair.get("high_pressure_delta");
+	//List hpd = SSair.get("high_pressure_delta");
+	ByondValue _hpd = SSair.ReadVar("high_pressure_delta");
+	std::vector<ByondValue> hpd = Byond_ReadList(_hpd);
 	for (int i = progression_order.size() - 1; i >= 0; i--) {
 		Tile *tile = progression_order[i];
 		if (tile->monstermos_info->curr_transfer_dir == 6) {
 			continue;
 		}
-		int hpd_length = hpd.list->length;
+		int hpd_length = hpd.size();
 		bool in_hpd = false;
 		for (int i = 0; i < hpd_length; i++) {
-			if (hpd.at(i) == tile->turf_ref) {
+			if (hpd[i] == tile->turf_ref) {
 				in_hpd = true;
 				break;
 			}
 		}
 		if (!in_hpd) {
-			hpd.append(tile->turf_ref);
+			//hpd.append(tile->turf_ref);
+			hpd.push_back(tile->turf_ref);
+			Byond_WriteList(_hpd, hpd);
 		}
 		Tile *tile2 = tile->adjacent[tile->monstermos_info->curr_transfer_dir];
 		if (!tile2->air) continue;
@@ -695,15 +709,20 @@ void Tile::explosively_depressurize(int cyclenum) {
 		total_gases_deleted += sum;
 		tile->monstermos_info->curr_transfer_amount += sum;
 		tile2->monstermos_info->curr_transfer_amount += tile->monstermos_info->curr_transfer_amount;
-		tile->turf_ref.set("pressure_difference", tile->monstermos_info->curr_transfer_amount);
-		tile->turf_ref.set("pressure_direction", 1 << tile->monstermos_info->curr_transfer_dir);
+		//tile->turf_ref.set("pressure_difference", tile->monstermos_info->curr_transfer_amount);
+		//tile->turf_ref.set("pressure_direction", 1 << tile->monstermos_info->curr_transfer_dir);
+		tile->turf_ref.ReadVar("pressure_difference").SetNum(tile->monstermos_info->curr_transfer_amount);
+		tile->turf_ref.ReadVar("pressure_direction").SetNum(1 << tile->monstermos_info->curr_transfer_dir);
+		
 		if (tile2->monstermos_info->curr_transfer_dir == 6) {
-			tile2->turf_ref.set("pressure_difference", tile2->monstermos_info->curr_transfer_amount);
-			tile2->turf_ref.set("pressure_direction", 1 << tile->monstermos_info->curr_transfer_dir);
+			//tile2->turf_ref.set("pressure_difference", tile2->monstermos_info->curr_transfer_amount);
+			//tile2->turf_ref.set("pressure_direction", 1 << tile->monstermos_info->curr_transfer_dir);
+			tile2->turf_ref.ReadVar("pressure_difference").SetNum(tile2->monstermos_info->curr_transfer_amount);
+			tile2->turf_ref.ReadVar("pressure_direction").SetNum(1 << tile->monstermos_info->curr_transfer_dir);
 		}
 		tile->air->clear();
-		tile->turf_ref.invoke_by_id(str_id_update_visuals, {});
-		tile->turf_ref.invoke_by_id(str_id_floor_rip, { Value(sum) });
+		ExecProcId(tile->turf_ref.value, str_id_update_visuals, {});
+		ExecProcId(tile->turf_ref.value, str_id_floor_rip, { FromFloat(sum) });
 	}
 	if ((total_gases_deleted / turfs.size()) > 20 && turfs.size() > 10) { // logging I guess
 
@@ -741,7 +760,7 @@ void TurfGrid::refresh() {
 					tile.excited_group.reset(); // excited group contains hanging pointers now (well they're not hanging yet, but they *will* be!)
 					tile.monstermos_info.reset(); // this also has hanging pointers.
 				}
-				tile.turf_ref = Value(TURF, index);
+				tile.turf_ref = RawValue(TURF, index);//Value(TURF, index);
 				tile.update_air_ref();
 			}
 		}
@@ -821,12 +840,12 @@ void ExcitedGroup::self_breakdown(bool space_is_all_consuming) {
 		Tile &tile = *turf_list[i];
 		tile.air->copy_from_mutable(combined);
 		tile.atmos_cooldown = 0;
-		tile.turf_ref.invoke("update_visuals", {});
+		ExecProc(tile.turf_ref.value, "update_visuals", {});
 	}
 	breakdown_cooldown = 0;
 }
 void ExcitedGroup::dismantle(bool unexcite) {
-	Value active_turfs = SSair.get_by_id(str_id_active_turfs);
+	ByondValue active_turfs = SSair.ReadVarByStrId(str_id_active_turfs);
 	int turf_list_size = turf_list.size();
 	for (int i = 0; i < turf_list_size; i++) {
 		Tile* tile = turf_list[i];
@@ -836,11 +855,11 @@ void ExcitedGroup::dismantle(bool unexcite) {
 		}
 	}
 	if (unexcite) {
-		std::vector<Value> turf_refs;
+		std::vector<CByondValue> turf_refs;
 		for (int i = 0; i < turf_list_size;  i++) {
 			turf_refs.push_back(turf_list[i]->turf_ref);
 		}
-		active_turfs.invoke("Remove", turf_refs);
+		ExecProc(active_turfs.value, "Remove", turf_refs);
 	}
 	turf_list.clear();
 }

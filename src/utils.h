@@ -103,6 +103,15 @@ inline CByondValue GetWorld(const char * name) {
     return val;
 }
 
+inline CByondValue RawValue(DataType t, u4c ref) {
+	return {
+		.type = t,
+		.data = {
+			.ref = ref
+		}
+	};
+}
+
 inline CByondValue FromFloat(float f) {
     return {
         .type = NUMBER,
@@ -132,3 +141,11 @@ CByondValue ByondFalse = {
     .type = NUMBER,
     .data = {.num = 0}
 };
+
+inline ByondValue ExecProc(CByondValue src, const char * name, std::vector<CByondValue> args) {
+	return Byond_CallProc(src, name, args.data(), args.size());
+}
+
+inline ByondValue ExecProcId(CByondValue src, u4c ref, std::vector<CByondValue> args) {
+	return Byond_CallProcByStrId(src, ref, args.data(), args.size());
+}
