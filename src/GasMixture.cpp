@@ -207,6 +207,22 @@ void GasMixture::temperature_share(GasMixture &sharer, float conduction_coeffici
     }
 }
 
+float GasMixture::temperature_share_immutable(float conduction_coefficient, float s_temperature, float heat_cap) {
+    float temperature_delta = temperature_archived - s_temperature;
+    if(std::abs(temperature_delta) > MINIMUM_TEMPERATURE_DELTA_TO_CONSIDER) {
+        float self_heat_capacity = heat_capacity_archived();
+        float sharer_heat_capacity = heat_cap;
+
+        if((sharer_heat_capacity > MINIMUM_HEAT_CAPACITY) && (self_heat_capacity > MINIMUM_HEAT_CAPACITY)) {
+            float heat = conduction_coefficient * temperature_delta * (self_heat_capacity*sharer_heat_capacity/(self_heat_capacity+sharer_heat_capacity));
+            if(!immutable)
+                temperature = std::max(temperature - heat/self_heat_capacity, TCMB);
+            s_temperature = std::max(s_temperature + heat/sharer_heat_capacity, TCMB);
+        }
+    }
+    return s_temperature;
+}
+
 int GasMixture::compare(GasMixture &sample) const {
 	float our_moles = 0;
 	for (int i = 0; i < total_num_gases; i++) {

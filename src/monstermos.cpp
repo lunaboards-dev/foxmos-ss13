@@ -287,6 +287,19 @@ MM_API(gm_last_share, {
 	return FromFloat(get_gas_mixture(src)->get_last_share());
 })
 
+MM_API(gm_temp_share, {
+	//if (argc != 4) Runtime("incorrect number of arguments for fm_gm_temp_share");
+	if (args[1].type != NUMBER) Runtime("coefficent must be a number");
+	float coeff = args[1].data.num;
+	auto gm = get_gas_mixture(src);
+	if (!ByondValue_IsNull(&args[0])) {
+		auto gm1 = get_gas_mixture(args[0]);
+		gm->temperature_share(*gm1, coeff);
+		return FromFloat(gm1->get_temperature());
+	} else if (args[2].type == NUMBER && args[3].type == NUMBER)
+		return FromFloat(gm->temperature_share_immutable(coeff, args[2].data.num, args[3].data.num));
+})
+
 /* trvh gasmixture_get_last_share(unsigned int args_len, ByondValue* args, ByondValue src)
 {
 	return ByondValue(get_gas_mixture(src)->get_last_share());

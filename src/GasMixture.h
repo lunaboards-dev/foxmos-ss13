@@ -40,6 +40,7 @@ class GasMixture
         void copy_from_mutable(const GasMixture &sample);
         float share(GasMixture &sharer, int atmos_adjacent_turfs);
         void temperature_share(GasMixture &sharer, float conduction_coefficient);
+        float temperature_share_immutable(float conduction_coefficient, float temperature, float heat_cap);
 		int compare(GasMixture &sample) const;
 		void clear();
 		void multiply(float multiplier);
