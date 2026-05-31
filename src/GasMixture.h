@@ -35,6 +35,8 @@ class GasMixture
         void merge(const GasMixture &giver);
         GasMixture remove(float amount);
         GasMixture remove_ratio(float ratio);
+        GasMixture remove_specific(int index, float amount);
+        GasMixture remove_specific_ratio(int index, float ratio);
         void copy_from_mutable(const GasMixture &sample);
         float share(GasMixture &sharer, int atmos_adjacent_turfs);
         void temperature_share(GasMixture &sharer, float conduction_coefficient);

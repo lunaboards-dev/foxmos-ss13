@@ -101,6 +101,28 @@ GasMixture GasMixture::remove_ratio(float ratio) {
     return removed;
 }
 
+GasMixture GasMixture::remove_specific(int index, float amount) {
+    return remove_specific_ratio(index, amount / moles[index]);
+}
+
+GasMixture GasMixture::remove_specific_ratio(int index, float ratio) {
+    if (ratio <= 0) return GasMixture(volume);
+    if (ratio > 1) ratio = 1;
+
+    GasMixture removed;
+    removed.volume = volume;
+    removed.temperature = temperature;
+    if (moles[index] < GAS_MIN_MOLES) {
+        removed.moles[index] = 0;
+    } else {
+        float removed_moles = (removed.moles[index] = (moles[index] * ratio));
+        if (!immutable) {
+            moles[index] -= removed_moles;
+        }
+    }
+    return removed;
+}
+
 void GasMixture::copy_from_mutable(const GasMixture &sample) {
     if(immutable || vacuum) return;
     //memcpy(moles, sample.moles, sizeof(moles));

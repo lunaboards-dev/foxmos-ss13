@@ -225,6 +225,12 @@ MM_API(gm_remove_ratio, {
 	get_gas_mixture(args[0])->copy_from_mutable(get_gas_mixture(src)->remove_ratio(args[1].data.num));
 })
 
+MM_API(gm_remove_specific_ratio, {
+	if (argc < 3 || args[1].type != DATUM_TYPEPATH) return ByondNull;
+	int index = gas_ids[args[0].data.ref];
+	get_gas_mixture(args[0])->copy_from_mutable(get_gas_mixture(src)->remove_specific_ratio(index, args[1].data.num));
+})
+
 /* trvh gasmixture_remove_ratio(unsigned int args_len, ByondValue* args, ByondValue src)
 {
 	if (args_len < 2)
@@ -238,6 +244,11 @@ MM_API(gm_remove, {
 	get_gas_mixture(args[0])->copy_from_mutable(get_gas_mixture(src)->remove(args[1].data.num));
 })
 
+MM_API(gm_remove_specific, {
+	if (argc < 3 || args[1].type != DATUM_TYPEPATH) return ByondNull;
+	int index = gas_ids[args[0].data.ref];
+	get_gas_mixture(args[0])->copy_from_mutable(get_gas_mixture(src)->remove_specific(index, args[1].data.num));
+})
 /* trvh gasmixture_remove(unsigned int args_len, ByondValue* args, ByondValue src)
 {
 	if (args_len < 2)
