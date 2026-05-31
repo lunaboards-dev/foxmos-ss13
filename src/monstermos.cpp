@@ -44,7 +44,22 @@ std::shared_ptr<GasMixture> &get_gas_mixture(ByondValue val)
 }
 
 MM_API(FUCK, {
-	return FromStr("FUCK");
+	if (argc == 0)
+		return FromStr("FUCK");
+	else {
+		std::string rtv = "FUCK("+std::to_string(argc)+")";
+		for (int i = 0; i < argc; ++i) {
+			u4c slen = 0;
+			Byond_ToString(args[i], nullptr, &slen);
+			char sval[slen+1];
+			Byond_ToString(args[i], sval, &slen);
+			rtv.append(":");
+			rtv.append(sval);
+		}
+		CByondValue v;
+		ByondValue_SetStr(&v, rtv.c_str());
+		return v;
+	}
 })
 
 int str_id_volume;
@@ -637,7 +652,7 @@ unsigned int str_id_atmos_overlay_types;
 })*/
 
 // for whatever reason, i couldn't use the macros for this one.
-BYOND_EXPORT CByondValue mm_turf_update_visuals(u4c _argc, CByondValue argv[]) {
+extern "C" BYOND_EXPORT CByondValue fm_turf_update_visuals(u4c _argc, CByondValue argv[]) {
 	CByondValue src = argv[0];
 	CByondValue * args = argv+1;
 	u4c argc = _argc - 1;

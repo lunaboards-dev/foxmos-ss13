@@ -37,6 +37,9 @@ SUBSYSTEM_DEF(air)
 
 	var/map_loading = TRUE
 	var/list/queued_for_activation
+	var/static/fm_ssair_update_ssair = load_ext("foxmos", "fm_ssair_update_ssair")
+	var/static/fm_ssair_get_amt_excited_groups = load_ext("foxmos", "fm_ssair_get_amt_excited_groups")
+	var/static/fm_ssair_process_excited_groups = load_ext("foxmos", "fm_ssair_process_excited_groups")
 
 /datum/controller/subsystem/air/stat_entry(msg)
 	msg += "C:{"
@@ -70,6 +73,7 @@ SUBSYSTEM_DEF(air)
 	return ..()
 
 /datum/controller/subsystem/air/proc/extools_update_ssair()
+	return call_ext(fm_ssair_process_excited_groups)(src)
 
 /datum/controller/subsystem/air/fire(resumed = 0)
 	var/timer = TICK_USAGE_REAL
@@ -266,7 +270,10 @@ SUBSYSTEM_DEF(air)
 		sleep()
 
 /datum/controller/subsystem/air/proc/process_excited_groups_extools()
+	return call_ext(fm_ssair_process_excited_groups)(src)
+
 /datum/controller/subsystem/air/proc/get_amt_excited_groups()
+	return call_ext(fm_ssair_get_amt_excited_groups)(src)
 
 /datum/controller/subsystem/air/proc/remove_from_active(turf/open/T)
 	active_turfs -= T

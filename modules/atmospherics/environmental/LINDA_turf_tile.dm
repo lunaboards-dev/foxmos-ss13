@@ -19,6 +19,8 @@
 	var/initial_gas_mix = OPENTURF_DEFAULT_ATMOS
 	//approximation of MOLES_O2STANDARD and MOLES_N2STANDARD pending byond allowing constant expressions to be embedded in constant strings
 	// If someone will place 0 of some gas there, SHIT WILL BREAK. Do not do that.
+	var/static/fm_turf_update_adj = load_ext("foxmos", "fm_turf_update_adjacent")
+	var/static/fm_turf_update_air_ref = load_ext("foxmos", "fm_turf_update_air_ref")
 
 /turf/open
 	//used for spacewind
@@ -34,6 +36,14 @@
 	var/list/atmos_overlay_types //gas IDs of current active gas overlays
 
 	is_openturf = TRUE
+
+	var/static/fm_eg_reset_cooldowns = load_ext("foxmos", "fm_turf_eg_reset_cooldowns")
+	var/static/fm_eg_garbage_collect = load_ext("foxmos", "fm_turf_eg_garbage_collect")
+	var/static/fm_get_excited = load_ext("foxmos", "fm_turf_get_excited")
+	var/static/fm_set_excited = load_ext("foxmos", "fm_turf_set_excited")
+	var/static/fm_process_cell = load_ext("foxmos", "fm_turf_process_cell")
+	var/static/fm_eq_pres_zone = load_ext("foxmos", "fm_turf_equalize_pressure_in_zone")
+	var/static/fm_update_visuals = load_ext("foxmos", "fm_turf_update_visuals")
 
 /turf/open/Initialize()
 	if(!blocks_air)
@@ -51,6 +61,7 @@
 	return ..()
 
 /turf/proc/update_air_ref()
+	return call_ext(fm_turf_update_air_ref)(src)
 
 /////////////////GAS MIXTURE PROCS///////////////////
 
@@ -101,16 +112,20 @@
 	temperature_archived = temperature
 
 /turf/open/proc/eg_reset_cooldowns()
+	return call_ext(fm_eg_reset_cooldowns)(src)
 /turf/open/proc/eg_garbage_collect()
+	return call_ext(fm_eg_garbage_collect)(src)
 /turf/open/proc/get_excited()
-/turf/open/proc/set_excited()
+	return call_ext(fm_get_excited)(src)
+/turf/open/proc/set_excited(ex)
+	return call_ext(fm_set_excited)(src, ex)
 
 /////////////////////////GAS OVERLAYS//////////////////////////////
 
-
+// why was this still defined in DM-land?
 /turf/open/proc/update_visuals()
-
-	var/list/atmos_overlay_types = src.atmos_overlay_types // Cache for free performance
+	return call_ext(fm_update_visuals)(src)
+	/* var/list/atmos_overlay_types = src.atmos_overlay_types // Cache for free performance
 	var/list/new_overlay_types = list()
 	var/static/list/nonoverlaying_gases = typecache_of_gases_with_no_overlays()
 
@@ -141,7 +156,7 @@
 			vis_contents += new_overlay_types
 
 	UNSETEMPTY(new_overlay_types)
-	src.atmos_overlay_types = new_overlay_types
+	src.atmos_overlay_types = new_overlay_types */
 
 /turf/open/proc/set_visuals(list/new_overlay_types)
 	if (atmos_overlay_types)

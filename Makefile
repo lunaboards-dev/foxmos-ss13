@@ -6,8 +6,8 @@ CFLAGS := -fPIC -m32 -Isrc/ -lbyond -lext
 %.o : %.cpp
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $< -o $@
 
-foxmos.so: $(object_files)
-	$(CC) -shared $(CFLAGS) $(CPPFLAGS) $(object_files) -o foxmos.so
+libfoxmos.so: $(object_files)
+	$(CC) -shared $(CFLAGS) $(CPPFLAGS) $(object_files) -o libfoxmos.so
 
 all: foxmos.so
 clean:

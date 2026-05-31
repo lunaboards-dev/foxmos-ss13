@@ -69,6 +69,7 @@
 	__update_extools_adjacent_turfs()
 
 /turf/proc/__update_extools_adjacent_turfs()
+	return call_ext(fm_turf_update_adj)(src)
 
 //returns a list of adjacent turfs that can share air with this one.
 //alldir includes adjacent diagonal tiles that can share

@@ -27,4 +27,6 @@ class BValue {
     BValue(const char * str) {
         ByondValue_SetStr(&value, str);
     }
+
+    BValue()
 };
